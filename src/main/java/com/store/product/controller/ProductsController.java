@@ -1,7 +1,9 @@
 package com.store.product.controller;
 
-import com.store.product.domain.Product;
-import com.store.product.repository.ProductRepository;
+import com.store.product.domain.entity.Product;
+import com.store.product.domain.model.ProductRequest;
+import com.store.product.domain.model.ProductResponse;
+import com.store.product.domain.usecase.ProductUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,46 +16,38 @@ import java.util.List;
 @RequestMapping("/products")
 public class ProductsController {
 
-    private final ProductRepository productRepository;
+    private final ProductUseCase productUseCase;
 
-    public ProductsController(ProductRepository productRepository) {
-        this.productRepository = productRepository;
+    public ProductsController(ProductUseCase productUseCase) {
+        this.productUseCase = productUseCase;
     }
 
     @GetMapping
-    public List<Product> getProducts() {
-        return productRepository.findAll();
+    public List<ProductResponse> getProducts() {
+        return productUseCase.getProducts();
     }
 
     @GetMapping("/{id}")
-    public Product getProducts(@PathVariable Long id) {
-        return productRepository.findById(id).orElseThrow(RuntimeException::new);
+    public ProductResponse getProducts(@PathVariable Long id) {
+        return productUseCase.getProductsById(id);
     }
 
     @PostMapping
-    public ResponseEntity createProduct(@Valid @RequestBody Product product) throws URISyntaxException {
-        Product savedProduct = productRepository.save(product);
+    public ResponseEntity createProduct(@Valid @RequestBody ProductRequest product) throws URISyntaxException {
+        Product savedProduct = productUseCase.save(product);
         return ResponseEntity.created(new URI("/product/" + savedProduct.getId())).body(savedProduct);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity updateProduct(@PathVariable Long id, @Valid @RequestBody Product product) {
-        Product currentProduct = productRepository.findById(id).orElseThrow(RuntimeException::new);
-        currentProduct.setName(product.getName());
-        currentProduct.setSku(product.getSku());
-        currentProduct.setBrand(product.getBrand());
-        currentProduct.setSize(product.getSize());
-        currentProduct.setPrice(product.getPrice());
-        currentProduct.setPrincipalImage(product.getPrincipalImage());
-        // currentProduct.setOtherImages(product.getOtherImages());
-        currentProduct = productRepository.save(product);
+    public ResponseEntity updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest product) {
+        Product currentProduct = productUseCase.update(id, product);
 
         return ResponseEntity.ok(currentProduct);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity deleteProduct(@PathVariable Long id) {
-        productRepository.deleteById(id);
+        productUseCase.deleteProduct(id);
         return ResponseEntity.ok().build();
     }
 

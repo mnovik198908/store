@@ -1,7 +1,9 @@
 package com.store.product.controller;
 
-import com.store.product.domain.Product;
-import com.store.product.repository.ProductRepository;
+import com.store.product.domain.entity.Product;
+import com.store.product.domain.model.ProductRequest;
+import com.store.product.domain.model.ProductResponse;
+import com.store.product.domain.usecase.ProductUseCase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static com.store.product.common.BuildProducts.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,12 +28,12 @@ class ProductsControllerTest {
     ProductsController productsController;
 
     @Mock
-    ProductRepository productRepository;
+    ProductUseCase productUseCase;
 
     @Test
     void getProductsEmptyList() {
-        when(productRepository.findAll()).thenReturn(new ArrayList<>());
-        List<Product> response = productsController.getProducts();
+        when(productUseCase.getProducts()).thenReturn(new ArrayList<>());
+        List<ProductResponse> response = productsController.getProducts();
 
         assertNotNull(response);
         assertEquals(0,response.size());
@@ -40,8 +41,8 @@ class ProductsControllerTest {
 
     @Test
     void getProductsWithElements() {
-        when(productRepository.findAll()).thenReturn(getProductsMock());
-        List<Product> response = productsController.getProducts();
+        when(productUseCase.getProducts()).thenReturn(getProductsResponseMock());
+        List<ProductResponse> response = productsController.getProducts();
 
         assertNotNull(response);
         assertEquals(2,response.size());
@@ -49,22 +50,15 @@ class ProductsControllerTest {
 
     @Test
     void getProductsById() {
-        doReturn(Optional.of(getProductOne())).when(productRepository).findById(PRODUCT_ID_ONE);
-        Product response = productsController.getProducts(PRODUCT_ID_ONE);
+        when(productUseCase.getProductsById(PRODUCT_ID_ONE)).thenReturn(getProductResponseOne());
+        ProductResponse response = productsController.getProducts(PRODUCT_ID_ONE);
 
         assertNotNull(response);
     }
 
     @Test
-    public void whenIdIsNullInGetProductsById_thenExceptionIsThrown() {
-        assertThrows(RuntimeException.class, () -> Optional
-                .ofNullable(productsController.getProducts(null))
-                .orElseThrow(RuntimeException::new));
-    }
-
-    @Test
     void createProduct() throws URISyntaxException {
-        when(productRepository.save(any(Product.class))).thenReturn(getProductOne());
+        when(productUseCase.save(any(ProductRequest.class))).thenReturn(getProductOne());
         ResponseEntity<Product> response = productsController.createProduct(getProductRequest());
         assertNotNull(response);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
@@ -79,30 +73,15 @@ class ProductsControllerTest {
 
     @Test
     void updateProduct() throws URISyntaxException {
-        doReturn(Optional.of(getProductOne())).when(productRepository).findById(PRODUCT_ID_ONE);
-        when(productRepository.save(any(Product.class))).thenReturn(getProductRequestUpdate());
+        when(productUseCase.update(any(), any(ProductRequest.class))).thenReturn(getProductUpdate());
         ResponseEntity<Product> response = productsController.updateProduct(PRODUCT_ID_ONE, getProductRequestUpdate());
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
-    void updateProductBadRequestWithNameIncorrect() {
-        assertThrows(Exception.class, () -> {
-            productsController.updateProduct(PRODUCT_ID_ONE, getProductRequesUpdatetWithNameIncorrect());
-        });
-    }
-
-    @Test
-    public void whenIdIsNullInUpdateProductsById_thenExceptionIsThrown() {
-        assertThrows(RuntimeException.class, () -> Optional
-                .ofNullable(productsController.updateProduct(null, getProductRequestUpdate()))
-                .orElseThrow(RuntimeException::new));
-    }
-
-    @Test
     void deleteProduct() {
         productsController.deleteProduct(getProductOne().getId());
-        verify(productRepository).deleteById(getProductOne().getId());
+        verify(productUseCase).deleteProduct(getProductOne().getId());
     }
 }
